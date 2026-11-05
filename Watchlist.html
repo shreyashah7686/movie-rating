@@ -1,0 +1,562 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Watchlist</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one centered column. Stats strip on top, add-a-movie panel, then a list of ticket-stub cards
+   (big average on the left, perforated edge, verdict stamp on the right). Each ticket opens to show
+   everyone's reviews and a form to add your own rating. */
+:root {
+  --bg: #eef0f4;
+  --surface: #ffffff;
+  --surface2: #e4e7ee;
+  --ink: #14161f;
+  --muted: #5d6475;
+  --line: #d3d7e0;
+  --accent: #b4540a;
+  --accent-ink: #ffffff;
+  --good: #11704a;   --good-bg: #d9f1e5;
+  --mid: #8a5a00;    --mid-bg: #fbeccb;
+  --bad: #b3261e;    --bad-bg: #fbdcd9;
+  --f-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --f-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101219; --surface: #181b25; --surface2: #222634; --ink: #eceef5; --muted: #9aa1b4; --line: #2c3142;
+    --accent: #f0a04b; --accent-ink: #1a1206;
+    --good: #5fd49c; --good-bg: #123626;
+    --mid: #f2c460; --mid-bg: #3a2c0c;
+    --bad: #ff8c82; --bad-bg: #3d1816;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101219; --surface: #181b25; --surface2: #222634; --ink: #eceef5; --muted: #9aa1b4; --line: #2c3142;
+  --accent: #f0a04b; --accent-ink: #1a1206;
+  --good: #5fd49c; --good-bg: #123626;
+  --mid: #f2c460; --mid-bg: #3a2c0c;
+  --bad: #ff8c82; --bad-bg: #3d1816;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 24px; flex-wrap: wrap; }
+h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(44px, 9vw, 72px); line-height: .9; letter-spacing: .01em; margin: 0; text-transform: uppercase; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.rule { font-family: var(--f-mono); font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.rule b { font-weight: 500; }
+.rule .g { color: var(--good); } .rule .m { color: var(--mid); } .rule .b { color: var(--bad); }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.stat .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--f-display); font-weight: 800; font-size: 38px; line-height: 1.05; margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .v.small { font-size: 22px; line-height: 1.2; padding-top: 8px; }
+.stat .v em { font-style: normal; font-size: 16px; color: var(--muted); font-weight: 700; }
+.split { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface2); margin-top: -6px; }
+.split i { display: block; height: 100%; transition: width .3s; }
+.split .g { background: var(--good); } .split .m { background: var(--mid); } .split .b { background: var(--bad); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.panel h2, .listhead h2 { font-family: var(--f-display); font-weight: 700; font-size: 24px; letter-spacing: .03em; text-transform: uppercase; margin: 0 0 12px; }
+form.grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.c3 { grid-column: span 3; } .c2 { grid-column: span 2; } .wide { grid-column: 1 / -1; }
+label, .lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+input[type=text], input[type=number], select, textarea {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 44px; }
+.rate-row { display: flex; align-items: center; gap: 16px; }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
+.live { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.live .num { font-family: var(--f-display); font-weight: 800; font-size: 40px; line-height: 1; min-width: 2.6ch; text-align: right; font-variant-numeric: tabular-nums; }
+.msg { font-size: 13px; min-height: 18px; margin: 0; color: var(--bad); }
+.msg.ok { color: var(--good); }
+.actions { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface2); border-radius: 8px; padding: 9px 16px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.danger { color: var(--bad); }
+.btn.sm { padding: 6px 12px; font-size: 13px; }
+
+.verdict { font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; white-space: nowrap; display: inline-block; }
+.verdict.good { background: var(--good-bg); color: var(--good); }
+.verdict.mid { background: var(--mid-bg); color: var(--mid); }
+.verdict.bad { background: var(--bad-bg); color: var(--bad); }
+.n-good { color: var(--good); } .n-mid { color: var(--mid); } .n-bad { color: var(--bad); }
+
+.listhead { display: flex; flex-direction: column; gap: 12px; }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.controls input[type=text] { flex: 1 1 200px; width: auto; }
+.controls select { width: auto; flex: 0 0 auto; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 13px; cursor: pointer; font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.tickets { display: flex; flex-direction: column; gap: 12px; list-style: none; padding: 0; margin: 0; }
+.ticket { display: grid; grid-template-columns: 104px minmax(0, 1fr) auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.stub { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 8px; border-right: 2px dashed var(--line); background: var(--surface2); }
+.stub .num { font-family: var(--f-display); font-weight: 800; font-size: 54px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stub .of { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-align: center; }
+.body { padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.body h3 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.meta { font-family: var(--f-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.note { margin: 2px 0 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.side { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 10px; padding: 14px 14px 14px 0; }
+.side .row { display: flex; gap: 8px; align-items: center; }
+.mini { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 4px; text-decoration: underline; text-underline-offset: 3px; }
+.mini:hover { color: var(--bad); }
+
+.more { grid-column: 1 / -1; border-top: 1px solid var(--line); background: var(--bg); padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.more h4 { margin: 0; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.revs { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.rev { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.rev .rnum { font-family: var(--f-display); font-weight: 800; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rev .who { font-weight: 600; font-size: 14px; }
+.rev .who i { font-style: normal; font-family: var(--f-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.rev p { margin: 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.addrev { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+.addrev .wide { grid-column: 1 / -1; }
+
+.empty { text-align: center; padding: 36px 16px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); }
+.foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 13px; }
+
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: 8px 14px; cursor: pointer; font-family: var(--f-display); font-weight: 700; font-size: 20px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.pane { display: flex; flex-direction: column; gap: 22px; }
+.cppintro h2 { font-family: var(--f-display); font-weight: 700; font-size: 28px; letter-spacing: .03em; text-transform: uppercase; margin: 0 0 8px; }
+.cppintro p { margin: 0 0 8px; max-width: 65ch; }
+.cpp { display: flex; flex-direction: column; gap: 14px; }
+.cc { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; }
+.cc .tag { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.cc h3 { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: .02em; text-transform: uppercase; margin: 2px 0 8px; line-height: 1.05; }
+.cc p { margin: 0 0 10px; color: var(--ink); }
+.cc .site { color: var(--muted); font-size: 14px; margin: 0; }
+.cc .site b { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; color: var(--ink); }
+.cc pre { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; line-height: 1.6; align-self: start; }
+.cc pre code { font-family: inherit; }
+@media (max-width: 640px) {
+  .cc { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  form.grid { grid-template-columns: 1fr; }
+  .c3, .c2 { grid-column: 1 / -1; }
+  .ticket { grid-template-columns: 78px minmax(0, 1fr); }
+  .stub .num { font-size: 42px; }
+  .side { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 16px 12px 16px; }
+  .rate-row { flex-wrap: wrap; }
+  .addrev { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Watch<span>list</span></h1>
+    <div class="rule" aria-label="How verdicts are decided">
+      <span><b class="g">7.0+</b> Recommended</span>
+      <span><b class="m">5.0 to 6.9</b> Mixed</span>
+      <span><b class="b">below 5.0</b> Not recommended</span>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tabBtnApp" aria-selected="true" aria-controls="paneApp">Watchlist</button>
+    <button class="tab" role="tab" id="tabBtnCpp" aria-selected="false" aria-controls="paneCpp">How it works in C++</button>
+  </div>
+
+  <div class="pane" id="paneApp" role="tabpanel" aria-labelledby="tabBtnApp">
+
+  <section class="stats" aria-label="Summary">
+    <div class="stat"><div class="k">Average rating</div><div class="v" id="sAvg">0.0<em> / 10</em></div></div>
+    <div class="stat"><div class="k">Movies</div><div class="v" id="sCount">0</div></div>
+    <div class="stat"><div class="k">Recommended</div><div class="v" id="sRec">0</div></div>
+    <div class="stat"><div class="k">Top pick</div><div class="v small" id="sTop">None yet</div></div>
+  </section>
+  <div class="split" id="split" aria-hidden="true"><i class="g"></i><i class="m"></i><i class="b"></i></div>
+
+  <section class="panel" aria-labelledby="addH">
+    <h2 id="addH">Rate a movie</h2>
+    <form class="grid" id="addForm" novalidate>
+      <div class="field c3"><label for="fTitle">Title</label><input type="text" id="fTitle" maxlength="80" placeholder="e.g. Everything Everywhere All at Once" autocomplete="off"></div>
+      <div class="field c3"><label for="fDirector">Director</label><input type="text" id="fDirector" maxlength="80" placeholder="e.g. Greta Gerwig" autocomplete="off"></div>
+      <div class="field c3"><label for="fYear">Year (optional)</label><input type="number" id="fYear" min="1888" max="2100" placeholder="2022"></div>
+      <div class="field c3"><label for="fGenre">Genre</label>
+        <select id="fGenre">
+          <option>Drama</option><option>Comedy</option><option>Action</option><option>Sci-Fi</option><option>Horror</option><option>Animation</option><option>Thriller</option><option>Romance</option><option>Documentary</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field wide">
+        <span class="lbl">Your rating</span>
+        <div class="rate-row">
+          <input type="range" id="fRating" min="0" max="10" step="0.1" value="7" aria-label="Rating out of 10">
+          <div class="live"><span class="num" id="liveNum">7.0</span><span class="verdict good" id="liveVerdict">Recommended</span></div>
+        </div>
+      </div>
+      <div class="field wide"><label for="fNote">One-line review (optional)</label><textarea id="fNote" maxlength="160" rows="1" placeholder="What stuck with you?"></textarea></div>
+      <div class="field wide actions">
+        <p class="msg" id="err" role="alert"></p>
+        <button class="btn primary" type="submit">Add rating</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="listhead" aria-labelledby="listH">
+    <h2 id="listH">Movies</h2>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search by title or director" aria-label="Search by title or director" autocomplete="off">
+      <select id="sort" aria-label="Sort movies">
+        <option value="high">Highest rated</option>
+        <option value="low">Lowest rated</option>
+        <option value="most">Most reviewed</option>
+        <option value="new">Newest added</option>
+        <option value="az">Title A to Z</option>
+      </select>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter by verdict">
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="good" aria-pressed="false">Recommended</button>
+      <button class="chip" data-f="mid" aria-pressed="false">Mixed</button>
+      <button class="chip" data-f="bad" aria-pressed="false">Not recommended</button>
+    </div>
+  </section>
+
+  <ul class="tickets" id="list"></ul>
+
+  <div class="foot">
+    <span>Starter movies and their reviews are examples. Your own ratings save in this browser.</span>
+    <button class="btn danger" id="clear" type="button">Reset everything</button>
+  </div>
+
+  </div>
+
+  <div class="pane" id="paneCpp" role="tabpanel" aria-labelledby="tabBtnCpp" hidden>
+    <section class="cppintro">
+      <h2>The C++ behind this site</h2>
+      <p>This site is the web version of our C++ project, a Movie Rating System. The program stores movies, decides if each one is recommended, and calculates the average rating. Each card below shows one required part of the project, the code for it, and where you can see the same idea on this site.</p>
+      <p class="meta">Run it with: g++ movie_rating.cpp -o movie_rating, then ./movie_rating</p>
+    </section>
+    <div class="cpp" id="cppList"></div>
+  </div>
+</div>
+
+<script>
+// Same rule as the C++ Movie class: 7+ Recommended, 5 to 6.9 Mixed, under 5 Not recommended.
+// A movie's rating is the average of all its reviews.
+class Movie {
+  constructor(title, director, year, genre) {
+    this.id = uid(); this.title = title; this.director = director || ""; this.year = year || ""; this.genre = genre || ""; this.reviews = [];
+  }
+  addReview(author, rating, text, mine) { this.reviews.push({ id: uid(), author: author, rating: rating, text: text || "", mine: !!mine }); }
+  average() { return this.reviews.length ? this.reviews.reduce((t, r) => t + r.rating, 0) / this.reviews.length : 0; }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function verdictOf(r) {
+  if (r >= 7) return { key: "good", label: "Recommended" };
+  if (r >= 5) return { key: "mid", label: "Mixed" };
+  return { key: "bad", label: "Not recommended" };
+}
+
+const KEY = "reel-verdict-v2";
+// Example movies with example reviews from made-up reviewers
+const SEED = [
+  ["Inception", "Christopher Nolan", 2010, "Sci-Fi", [["Maya", 9.0, "Dense and clever. The ending still sticks with me."], ["Jordan", 8.5, "Great ideas, a bit heavy on explaining."], ["Sam", 9.2, "Rewatched it three times and keep finding new things."], ["Priya", 8.0, "Gorgeous and tense, Hans Zimmer carries it."]]],
+  ["Spider-Man: Into the Spider-Verse", "Bob Persichetti, Peter Ramsey, Rodney Rothman", 2018, "Animation", [["Leo", 9.1, "Looks like nothing else. Real heart too."], ["Ava", 8.7, "Every frame is a comic panel come to life."], ["Diego", 8.9, "The soundtrack alone is worth it."]]],
+  ["The Last Airbender", "M. Night Shyamalan", 2010, "Action", [["Noah", 3.0, "Skips most of what made the show work."], ["Zoe", 4.5, "Great source, rushed and flat on screen."], ["Hana", 3.5, "The fight scenes should have been so much better."]]],
+  ["Barbie", "Greta Gerwig", 2023, "Comedy", [["Ava", 7.5, "Funny and sharp, a little uneven in the middle."], ["Sam", 6.0, "Loved the look, wanted more story."], ["Maya", 8.0, "Way smarter than I expected."], ["Leo", 5.5, "Fun in parts, but it lost me by the end."]]],
+  ["Parasite", "Bong Joon-ho", 2019, "Thriller", [["Priya", 9.4, "The tone shifts are perfectly handled."], ["Jordan", 9.0, "Every scene is doing two jobs at once."], ["Hana", 8.8, "Tense, funny, and sad all together."]]],
+  ["The Dark Knight", "Christopher Nolan", 2008, "Action", [["Diego", 9.3, "The Joker scenes are unforgettable."], ["Zoe", 8.9, "Still the best superhero movie for me."], ["Noah", 8.4, "A bit long but it earns it."]]],
+  ["Get Out", "Jordan Peele", 2017, "Horror", [["Maya", 8.6, "Scary and smart at the same time."], ["Sam", 8.2, "That second half is so well built."], ["Leo", 7.8, "Great debut, loved the slow reveal."]]],
+  ["Spirited Away", "Hayao Miyazaki", 2001, "Animation", [["Hana", 9.5, "Pure imagination. I could watch the bathhouse forever."], ["Ava", 9.0, "Comforting and strange in the best way."], ["Priya", 8.8, "Beautiful from start to finish."]]],
+  ["Everything Everywhere All at Once", "Daniel Kwan, Daniel Scheinert", 2022, "Sci-Fi", [["Jordan", 8.7, "Chaotic, and somehow it all lands emotionally."], ["Zoe", 9.1, "Made me laugh and cry within five minutes."], ["Diego", 6.8, "Too busy for me, but very creative."]]],
+  ["Interstellar", "Christopher Nolan", 2014, "Sci-Fi", [["Noah", 8.5, "The docking scene gives me chills every time."], ["Maya", 7.9, "Big ideas, a few clunky lines."], ["Sam", 8.8, "Huge, emotional, and loud in the right way."]]],
+  ["Cats", "Tom Hooper", 2019, "Other", [["Leo", 2.0, "I do not understand any of the choices."], ["Hana", 3.0, "So strange it is almost fun."], ["Priya", 1.5, "Hard to sit through."]]],
+  ["The Emoji Movie", "Tony Leondis", 2017, "Animation", [["Zoe", 2.5, "More of an ad than a movie."], ["Diego", 3.5, "A few jokes land, not many."], ["Ava", 2.0, "Skip it."]]]
+];
+function seedMovies() {
+  return SEED.map(s => { const m = new Movie(s[0], s[1], s[2], s[3]); s[4].forEach(r => m.addReview(r[0], r[1], r[2], false)); return m; });
+}
+
+let movies = [], filter = "all", open = new Set(), armed = false;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a.map(o => Object.assign(new Movie(), o)); }
+  } catch (e) {}
+  return seedMovies();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(movies)); } catch (e) {} }
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function renderStats() {
+  const n = movies.length;
+  const avg = n ? movies.reduce((t, m) => t + m.average(), 0) / n : 0;
+  const counts = { good: 0, mid: 0, bad: 0 };
+  movies.forEach(m => counts[verdictOf(m.average()).key]++);
+  $("sAvg").innerHTML = avg.toFixed(1) + "<em> / 10</em>";
+  $("sCount").innerHTML = n + "<em> · " + movies.reduce((t, m) => t + m.reviews.length, 0) + " ratings</em>";
+  $("sRec").textContent = counts.good;
+  const top = movies.slice().sort((a, b) => b.average() - a.average())[0];
+  $("sTop").textContent = top ? top.title : "None yet";
+  const parts = $("split").children;
+  ["good", "mid", "bad"].forEach((k, i) => { parts[i].style.width = (n ? counts[k] / n * 100 : 0) + "%"; });
+}
+
+function reviewHTML(r) {
+  const v = verdictOf(r.rating);
+  return '<li class="rev"><span class="rnum n-' + v.key + '">' + r.rating.toFixed(1) + '</span>' +
+    '<div>' + (r.mine ? '<div class="who"><i>Your rating</i></div>' : '') + (r.text ? '<p>' + esc(r.text) + '</p>' : '') + '</div>' +
+    (r.mine ? '<button class="mini" data-delrev="' + r.id + '" data-m="' + '">Delete</button>' : '') + '</li>';
+}
+
+function cardHTML(m) {
+  const avg = m.average(), v = verdictOf(avg), n = m.reviews.length;
+  const meta = [m.director ? "Dir. " + m.director : "", m.year, m.genre].filter(Boolean).join(" · ");
+  const isOpen = open.has(m.id);
+  const latest = m.reviews.slice().reverse().find(r => r.text);
+  const revs = m.reviews.slice().reverse().map(r => reviewHTML(r).replace('data-m=""', 'data-m="' + m.id + '"')).join("");
+  return '<li class="ticket" data-id="' + m.id + '">' +
+    '<div class="stub"><span class="num n-' + v.key + '">' + avg.toFixed(1) + '</span><span class="of">/ 10<br>' + n + (n === 1 ? ' rating' : ' ratings') + '</span></div>' +
+    '<div class="body"><h3>' + esc(m.title) + '</h3>' + (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') +
+      (latest ? '<p class="note">' + '“' + esc(latest.text) + '”' + '</p>' : '') + '</div>' +
+    '<div class="side"><span class="verdict ' + v.key + '">' + v.label + '</span>' +
+      '<div class="row"><button class="btn sm" data-toggle="' + m.id + '" aria-expanded="' + isOpen + '">' + (isOpen ? 'Hide' : 'Reviews &amp; rate') + '</button>' +
+      '<button class="mini" data-delmovie="' + m.id + '">Delete</button></div></div>' +
+    '<div class="more" ' + (isOpen ? '' : 'hidden') + '>' +
+      '<h4>All ratings</h4><ul class="revs">' + revs + '</ul>' +
+      '<form class="addrev" data-rform="' + m.id + '" novalidate>' +
+        '<div class="field wide"><span class="lbl">Your rating</span><div class="rate-row"><input type="range" min="0" max="10" step="0.1" value="7" data-live="1" aria-label="Your rating for ' + esc(m.title) + '"><div class="live"><span class="num n-good" data-lnum>7.0</span><span class="verdict good" data-lver>Recommended</span></div></div></div>' +
+        '<div class="field wide"><label for="rt-' + m.id + '">Your review (optional)</label><textarea id="rt-' + m.id + '" maxlength="160" rows="1" placeholder="Add your take"></textarea></div>' +
+        '<div class="field wide actions"><span></span><button class="btn primary sm" type="submit">Add my rating</button></div>' +
+      '</form></div></li>';
+}
+
+function renderList() {
+  const q = $("search").value.trim().toLowerCase();
+  const rows = movies.filter(m => (filter === "all" || verdictOf(m.average()).key === filter) &&
+    (m.title.toLowerCase().includes(q) || m.director.toLowerCase().includes(q)));
+  const by = {
+    high: (a, b) => b.average() - a.average(),
+    low: (a, b) => a.average() - b.average(),
+    most: (a, b) => b.reviews.length - a.reviews.length,
+    new: (a, b) => movies.indexOf(b) - movies.indexOf(a),
+    az: (a, b) => a.title.localeCompare(b.title)
+  };
+  rows.sort(by[$("sort").value]);
+  $("list").innerHTML = rows.length ? rows.map(cardHTML).join("")
+    : '<li class="empty">' + (movies.length ? "No movies match that search or filter." : "Nothing here yet. Add a movie above.") + "</li>";
+}
+function render() { renderStats(); renderList(); }
+
+function updateLive(range, numEl, verEl) {
+  const r = parseFloat(range.value), v = verdictOf(r);
+  numEl.textContent = r.toFixed(1); numEl.className = "num n-" + v.key;
+  verEl.textContent = v.label; verEl.className = "verdict " + v.key;
+}
+$("fRating").addEventListener("input", () => updateLive($("fRating"), $("liveNum"), $("liveVerdict")));
+
+function say(text, ok) { const e = $("err"); e.textContent = text; e.className = "msg" + (ok ? " ok" : ""); }
+
+$("addForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const title = $("fTitle").value.trim();
+  const rating = Math.round(parseFloat($("fRating").value) * 10) / 10;
+  const yr = $("fYear").value.trim();
+  if (!title) { say("Enter a movie title first."); $("fTitle").focus(); return; }
+  if (yr && (+yr < 1888 || +yr > 2100)) { say("Enter a year between 1888 and 2100, or leave it blank."); return; }
+  const author = "You";
+  const text = $("fNote").value.trim();
+  let m = movies.find(x => x.title.toLowerCase() === title.toLowerCase());
+  if (m) {
+    m.addReview(author, rating, text, true);
+    open.add(m.id);
+    say("That movie is already listed, so your rating was added to it.", true);
+  } else {
+    m = new Movie(title, $("fDirector").value.trim(), yr, $("fGenre").value);
+    m.addReview(author, rating, text, true);
+    movies.push(m);
+    say("Added " + title + ".", true);
+  }
+  save(); render();
+  $("fTitle").value = ""; $("fDirector").value = ""; $("fYear").value = ""; $("fNote").value = "";
+  $("fTitle").focus();
+});
+
+$("search").addEventListener("input", renderList);
+$("sort").addEventListener("change", renderList);
+$("chips").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === b)));
+  renderList();
+});
+
+$("list").addEventListener("click", e => {
+  const t = e.target.closest("[data-toggle]");
+  const dm = e.target.closest("[data-delmovie]");
+  const dr = e.target.closest("[data-delrev]");
+  if (t) {
+    const id = t.dataset.toggle, panel = t.closest(".ticket").querySelector(".more");
+    if (open.has(id)) open.delete(id); else open.add(id);
+    panel.hidden = !open.has(id);
+    t.setAttribute("aria-expanded", String(open.has(id)));
+    t.textContent = open.has(id) ? "Hide" : "Reviews & rate";
+  } else if (dm) {
+    movies = movies.filter(m => m.id !== dm.dataset.delmovie); save(); render();
+  } else if (dr) {
+    const m = movies.find(x => x.id === dr.dataset.m);
+    if (m) { m.reviews = m.reviews.filter(r => r.id !== dr.dataset.delrev); if (!m.reviews.length) movies = movies.filter(x => x !== m); save(); render(); }
+  }
+});
+$("list").addEventListener("input", e => {
+  const r = e.target.closest("[data-live]"); if (!r) return;
+  const box = r.closest(".addrev");
+  updateLive(r, box.querySelector("[data-lnum]"), box.querySelector("[data-lver]"));
+});
+$("list").addEventListener("submit", e => {
+  const f = e.target.closest("[data-rform]"); if (!f) return;
+  e.preventDefault();
+  const m = movies.find(x => x.id === f.dataset.rform); if (!m) return;
+  const name = "You";
+  const rating = Math.round(parseFloat(f.querySelector("[data-live]").value) * 10) / 10;
+  m.addReview(name, rating, f.querySelector("textarea").value.trim(), true);
+  open.add(m.id); save(); render();
+});
+
+// Reset needs two clicks (no confirm dialogs in artifacts); it brings the example movies back
+$("clear").addEventListener("click", () => {
+  const b = $("clear");
+  if (!armed) { armed = true; b.textContent = "Click again to reset"; setTimeout(() => { armed = false; b.textContent = "Reset everything"; }, 3500); return; }
+  movies = seedMovies(); open = new Set(); armed = false; b.textContent = "Reset everything"; save(); render();
+});
+
+// ---- C++ tab: one card per required part of the project ----
+const CPP = [
+  ["Variables and data types", "Every piece of data gets a type that fits it. Titles and directors are text (string), ratings have decimals (double), and counters are whole numbers (int).",
+   "Each movie on this site stores a title, director, year and rating in the same way.",
+`string title;
+string director;
+double rating;              // out of 10
+int recommendedCount = 0;   // whole-number counter`],
+  ["cin and cout", "cout prints to the screen and cin reads what the user types. We used getline for text so a title can have spaces in it.",
+   "The Rate a movie form at the top of this page is the web version of these prompts.",
+`cout << "Enter movie title: ";
+getline(cin, userTitle);
+
+cout << "Enter your rating (0 to 10): ";
+cin >> userRating;`],
+  ["if / else", "The program checks the rating and picks one of three statuses. Only one branch runs.",
+   "The colored verdict on each movie card (green, yellow, red) uses the same 7 and 5 cutoffs.",
+`if (rating >= 7.0) {
+    return "Recommended";
+} else if (rating >= 5.0) {
+    return "Mixed Reviews";
+} else {
+    return "Not Recommended";
+}`],
+  ["Loops", "A for loop goes through every movie to display it and add up the ratings. A while loop keeps asking until the user enters a rating from 0 to 10.",
+   "The movie list is drawn one card at a time, and the slider only allows 0 to 10.",
+`for (int i = 0; i < 4; i++) {
+    movies[i].display();
+    total += movies[i].getRating();
+}
+
+while (userRating < 0 || userRating > 10) {
+    cout << "Invalid rating. Enter a number from 0 to 10: ";
+    cin >> userRating;
+}`],
+  ["Classes and objects", "A class is the blueprint, and an object is one real movie built from it. Movie describes what every movie has, and movie1 is Inception.",
+   "Every ticket on the Watchlist tab is one movie object.",
+`class Movie {
+    // data and methods go here
+};
+
+Movie movie1("Inception", "Christopher Nolan", 8.8);`],
+  ["public and private", "Private data can only be changed from inside the class, which protects it. Public methods are the only way other code can use a movie.",
+   "Ratings can only be added through the form, not edited by accident.",
+`class Movie {
+private:
+    string title;
+    string director;
+    double rating;
+
+public:
+    Movie(string t, string d, double r);
+    void display();
+    string getRecommendation();
+};`],
+  ["Methods", "Methods are functions that belong to a class. display prints a movie, getRecommendation decides the status, and getRating lets main read the private rating.",
+   "The verdict chip and each card come from the same kind of logic.",
+`double getRating() {
+    return rating;
+}
+
+void display() {
+    cout << "Movie: " << title << endl;
+    cout << "Rating: " << rating << " / 10" << endl;
+    cout << "Status: " << getRecommendation() << endl;
+}`],
+  ["Parameterized constructor", "The constructor runs when an object is created. It takes the title, director and rating as parameters and assigns them, so every movie starts with real data.",
+   "Adding a movie in the form creates a new movie with these same three details.",
+`Movie(string t, string d, double r) {
+    title = t;
+    director = d;
+    rating = r;
+}`],
+  ["Multiple objects", "We made three movies and let the user add a fourth. They go into an array so one loop can handle all of them.",
+   "The list starts with 12 movies and grows as you add more.",
+`Movie movie1("Inception", "Christopher Nolan", 8.8);
+Movie movie2("The Last Airbender", "M. Night Shyamalan", 4.0);
+Movie movie3("Spider-Man: Into the Spider-Verse", "Bob Persichetti", 8.4);
+Movie movie4(userTitle, userDirector, userRating);
+
+Movie movies[4] = {movie1, movie2, movie3, movie4};`],
+  ["Basic calculations", "Inside the loop we add every rating to a running total. After the loop we divide by the number of movies to get the average, and we count how many were recommended.",
+   "The Average rating box at the top is the same calculation.",
+`total += movies[i].getRating();
+
+if (movies[i].getRecommendation() == "Recommended") {
+    recommendedCount++;
+}
+
+double average = total / 4;`]
+];
+$("cppList").innerHTML = CPP.map((c, i) =>
+  '<article class="cc"><div><div class="tag">Part ' + (i + 1) + ' of ' + CPP.length + '</div><h3>' + esc(c[0]) + '</h3><p>' + esc(c[1]) + '</p><p class="site"><b>On the site</b> ' + esc(c[2]) + '</p></div><pre><code>' + esc(c[3]) + '</code></pre></article>'
+).join("");
+
+// Tabs
+function showTab(which) {
+  const app = which === "app";
+  $("paneApp").hidden = !app; $("paneCpp").hidden = app;
+  $("tabBtnApp").setAttribute("aria-selected", String(app));
+  $("tabBtnCpp").setAttribute("aria-selected", String(!app));
+}
+$("tabBtnApp").addEventListener("click", () => showTab("app"));
+$("tabBtnCpp").addEventListener("click", () => showTab("cpp"));
+
+movies = load();
+updateLive($("fRating"), $("liveNum"), $("liveVerdict"));
+render();
+</script>
+
+</body></html>
